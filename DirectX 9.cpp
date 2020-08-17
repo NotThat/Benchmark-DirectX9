@@ -1,5 +1,5 @@
 //#define USETHREADS	//spawn a second renderer thread and use busy message reading for input
-#define MODEZERO		//comment out for human benchmark mode
+//#define MODEZERO		//comment out for human benchmark mode, uncomment for black and white
 //#define FPSLIMIT 4000 //comment out for uncapped FPS
 
 //set these for different viewport resolution, for example
@@ -163,7 +163,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int main() //for console purposes.
 {
-	return WinMain(GetModuleHandle(NULL), NULL, NULL, SW_SHOWNORMAL);
+	int ret = WinMain(GetModuleHandle(NULL), NULL, NULL, SW_SHOWNORMAL);
+	return ret;
 }
 
 inline void renderFunc(LPDIRECT3DDEVICE9 d3ddev) {
@@ -283,9 +284,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 #ifdef USETHREADS
 	renderThread.join(); //var 'stop' ends the thread
 #endif
-	d3ddev->Release();   //release d3d
-	d3d->Release();
 
+	d3ddev->Release();   //release d3d
+	d3d->Release(); 
+	
 	free(raw_buf);
+
+	DestroyWindow(hWnd);
+	PostQuitMessage(0);
+
+	ShowCursor(true);
+
+#ifndef MODEZERO
+	std::cout << "\nPress Enter to Continue\n";
+	getchar();
+#endif
+
 	return 0;			 //all done
 }
