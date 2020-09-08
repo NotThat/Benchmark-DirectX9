@@ -1,5 +1,5 @@
 //#define USETHREADS	//spawn a second renderer thread and use busy message reading for input
-//#define MODEZERO		//comment out for human benchmark mode, uncomment for black and white
+#define MODEZERO		//comment out for human benchmark mode, uncomment for black and white
 //#define FPSLIMIT 4000 //comment out for uncapped FPS
 
 //set these for different viewport resolution, for example
@@ -75,11 +75,17 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		//if (!raw_buf) { stop = TRUE; return false; }
 
 		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, raw_buf, &cb_size, sizeofRAWINPUTHEADER);
-#ifndef MODEZERO
+
 			if (raw_buf->header.dwType == RIM_TYPEMOUSE &&
 				(raw_buf->data.mouse.usButtonFlags == RI_MOUSE_LEFT_BUTTON_DOWN ||
 					raw_buf->data.mouse.usButtonFlags == RI_MOUSE_RIGHT_BUTTON_DOWN)) { //only triggers once per button press
-
+#ifdef MODEZERO
+				if (currentColor == white)
+					currentColor = black;
+				else
+					currentColor = white;
+#endif
+#ifndef MODEZERO
 				if (state == 0) {
 					system("CLS"); //clear console
 					state = 1;
@@ -119,8 +125,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					std::cout << "  successful clicks: " << clickAmount << "\n";
 					std::cout << "  early clicks: " << errors << "\n";
 				}
-			}
 #endif
+			}
+
 #ifndef MODEZERO
 			if (raw_buf->header.dwType == RIM_TYPEKEYBOARD) {
 #endif
@@ -252,18 +259,56 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	Keyboard.hwndTarget = hWnd;
 	if (!RegisterRawInputDevices(&Keyboard, 1, sizeof(RAWINPUTDEVICE))) return -1;
 
-#ifndef MODEZERO
+//#ifndef MODEZERO
 	RAWINPUTDEVICE Mouse;
 	Mouse.usUsagePage = 0x01;
 	Mouse.usUsage = 0x02; //mouse
 	Mouse.dwFlags = RIDEV_NOLEGACY;
 	Mouse.hwndTarget = hWnd;
 	if (!RegisterRawInputDevices(&Mouse, 1, sizeof(RAWINPUTDEVICE))) return -1;
-#endif
+//#endif
 
 	ShowCursor(FALSE);
 	SetCursor(NULL);
 	d3ddev->ShowCursor(FALSE);
+
+
+	//using System;
+	//using System.Diagnostics;
+	//using System.Threading;
+//#include <sched.h>  // sched_setaffinity
+	//using System.Windows.Forms;
+
+	HANDLE process = GetCurrentProcess();
+
+	DWORD_PTR processAffinityMask;
+	DWORD_PTR systemAffinityMask;
+
+	if (!GetProcessAffinityMask(process, &processAffinityMask, &systemAffinityMask))
+		return -1;
+
+	int core = 4; /* set this to the core you want your process to run on */
+	DWORD_PTR mask = 0x1;
+	for (int bit = 0, currentCore = 1; bit < 64; bit++)
+	{
+		if (mask & processAffinityMask)
+		{
+			if (currentCore != core)
+			{
+				processAffinityMask &= ~mask;
+			}
+			currentCore++;
+		}
+		mask = mask << 1;
+	}
+
+	//BOOL success = SetProcessAffinityMask(process, processAffinityMask);
+	SetPriorityClass(process, REALTIME_PRIORITY_CLASS);
+	//SetPriorityClass(process, HIGH_PRIORITY_CLASS);
+
+	//Process.GetCurrentProcess().ProcessorAffinity = new IntPtr(2); // Use only the second core 
+	//Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.RealTime; // Set highest process priority
+	//Thread.CurrentThread.Priority = ThreadPriority.Highest; // Set highest thread priority
 	
 #ifdef USETHREADS
 	std::thread renderThread; //declare a thread without launching it
