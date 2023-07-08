@@ -87,7 +87,6 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 #ifndef MODEZERO
 				if (state == 0) {
-					system("CLS"); //clear console
 					state = 1;
 					currentColor = red;
 					//pick a time to transition screen from red to green
@@ -111,19 +110,12 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					greenClickTime = std::chrono::high_resolution_clock::now();
 					auto timeDiff = greenClickTime - greenStartTime;
 					lastClick = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
+					std::cout << "successful click #" << clickAmount + 1 << ": " << lastClick / 1000.0 << "ms\n";
 					if (lastClick < minClick) minClick = lastClick;
 					if (lastClick > maxClick) maxClick = lastClick;
 					clickSum += lastClick;
 					clickAmount++;
 					averageClick = clickSum / clickAmount;
-
-					std::cout << "\n";
-					std::cout << "  last click: " << std::fixed << std::setprecision(1) << (double)lastClick / 1000 << " ms\n";
-					std::cout << "  min click: " << (double)minClick / 1000 << " ms\n";
-					std::cout << "  max click: " << (double)maxClick / 1000 << " ms\n";
-					std::cout << "  average click: " << (double)averageClick / 1000 << " ms\n";
-					std::cout << "  successful clicks: " << clickAmount << "\n";
-					std::cout << "  early clicks: " << errors << "\n";
 				}
 #endif
 			}
@@ -140,6 +132,11 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					else 
 #endif
 						if (raw_buf->data.keyboard.VKey == 0x1B) {  // ESC key
+							std::cout << "\nmin click: " << minClick / 1000.0 << " ms\n";
+							std::cout << "max click: " << maxClick / 1000.0 << " ms\n";
+							std::cout << "average click: " << averageClick / 1000.0 << " ms\n";
+							std::cout << "successful clicks: " << clickAmount << "\n";
+							std::cout << "early clicks: " << errors << "\n";
 						stop = TRUE;
 						break;
 					}
@@ -170,6 +167,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int main() //for console purposes.
 {
+	std::cout << std::fixed << std::setprecision(2);
 	int ret = WinMain(GetModuleHandle(NULL), NULL, NULL, SW_SHOWNORMAL);
 	return ret;
 }
