@@ -167,6 +167,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int main() //for console purposes.
 {
+	srand(static_cast<unsigned>(time(0))); // use time as seed
 	std::cout << std::fixed << std::setprecision(2);
 	int ret = WinMain(GetModuleHandle(NULL), NULL, NULL, SW_SHOWNORMAL);
 	return ret;
