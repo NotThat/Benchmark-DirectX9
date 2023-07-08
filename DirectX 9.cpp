@@ -32,6 +32,8 @@ D3DCOLOR currentColor = white;
 #include <iostream>
 #include <iomanip> // std::setprecision
 #include <chrono> //used for time
+#include <vector>
+#include <algorithm>
 D3DCOLOR currentColor = black;
 D3DCOLOR red = D3DCOLOR(0x00FF0000);
 D3DCOLOR green = D3DCOLOR(0x0000FF00);
@@ -42,7 +44,8 @@ auto redStartTime = redToGreenTime;
 int state = 0; //0 stats screen, 1 red waiting screen, 2 green
 int errors = 0;
 int click = 0;
-long long lastClick, minClick = 999999999999, maxClick = 0, averageClick = 0, clickSum = 0, clickAmount = 0;
+std::vector<int64_t> clickTimes;
+int64_t clickAmount;
 #endif
 
 #ifdef USETHREADS
@@ -84,8 +87,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					currentColor = black;
 				else
 					currentColor = white;
-#endif
-#ifndef MODEZERO
+#else
 				if (state == 0) {
 					state = 1;
 					currentColor = red;
@@ -109,13 +111,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					currentColor = black;
 					greenClickTime = std::chrono::high_resolution_clock::now();
 					auto timeDiff = greenClickTime - greenStartTime;
-					lastClick = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
-					std::cout << "successful click #" << clickAmount + 1 << ": " << lastClick / 1000.0 << "ms\n";
-					if (lastClick < minClick) minClick = lastClick;
-					if (lastClick > maxClick) maxClick = lastClick;
-					clickSum += lastClick;
+					int64_t clickTime = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
+					clickTimes.push_back(clickTime);
+					std::cout << "Successful Click #" << clickAmount + 1 << ": " << clickTime / 1000.0 << "ms\n";
 					clickAmount++;
-					averageClick = clickSum / clickAmount;
 				}
 #endif
 			}
@@ -132,11 +131,35 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					else 
 #endif
 						if (raw_buf->data.keyboard.VKey == 0x1B) {  // ESC key
-							std::cout << "\nmin click: " << minClick / 1000.0 << " ms\n";
-							std::cout << "max click: " << maxClick / 1000.0 << " ms\n";
-							std::cout << "average click: " << averageClick / 1000.0 << " ms\n";
-							std::cout << "successful clicks: " << clickAmount << "\n";
-							std::cout << "early clicks: " << errors << "\n";
+#ifndef MODEZERO
+							sort(clickTimes.begin(), clickTimes.end());
+
+							size_t size = clickTimes.size();
+
+							int64_t sum = 0;
+							for (int64_t clickTime : clickTimes) {
+								sum += clickTime;
+							}
+
+							int64_t average = sum / size;
+
+							// stdev
+							double standard_deviation = 0.0;
+
+							for (int64_t clickTime : clickTimes) {
+								standard_deviation += pow(clickTime - average, 2);
+							}
+
+							double stdev = sqrt(standard_deviation / (size - 1));
+
+							std::cout << "\nMax: " << clickTimes.back() / 1000.0 << "ms\n";
+							std::cout << "Avg: " << average / 1000.0 << "ms\n";
+							std::cout << "Min: " << clickTimes.front() / 1000.0 << "ms\n";
+							std::cout << "STDEV: " << stdev / 1000.0 << "\n";
+							std::cout << "Total Clicks: " << clickAmount + errors << "\n";
+							std::cout << "Successful Clicks: " << clickAmount << "\n";
+							std::cout << "Early Clicks: " << errors << "\n";
+#endif
 						stop = TRUE;
 						break;
 					}
@@ -167,8 +190,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int main() //for console purposes.
 {
+#ifndef MODEZERO
 	srand(static_cast<unsigned>(time(0))); // use time as seed
 	std::cout << std::fixed << std::setprecision(2);
+#endif
 	int ret = WinMain(GetModuleHandle(NULL), NULL, NULL, SW_SHOWNORMAL);
 	return ret;
 }
