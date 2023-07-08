@@ -90,7 +90,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					state = 1;
 					currentColor = red;
 					//pick a time to transition screen from red to green
-					int rnd = rand() % 1000 + 3000; //(between 3 and 4 seconds)
+					int rnd = rand() % 3000 + 1000; //(between 1 and 4 seconds)
 					auto now = std::chrono::high_resolution_clock::now();
 					redToGreenTime = now + std::chrono::milliseconds(rnd);
 					redStartTime = now;
